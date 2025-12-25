@@ -452,37 +452,37 @@ function destroyChart(coinId) {
 // ============================================
 
 function startAutoRefresh() {
-    let seconds = 30;
-    
-    // Update countdown display
-    updateCountdown(seconds);
-    
-    // Countdown timer
+    // Clear existing timers (safety)
+    if (AppState.refreshTimer) clearInterval(AppState.refreshTimer);
+    if (AppState.countdownTimer) clearInterval(AppState.countdownTimer);
+
+    let remaining = CONFIG.REFRESH_INTERVAL / 1000;
+    updateCountdown(remaining);
+
+    // Countdown tick
     AppState.countdownTimer = setInterval(() => {
-        seconds--;
-        updateCountdown(seconds);
-        
-        if (seconds <= 0) {
-            seconds = 30;
-        }
+        remaining--;
+        if (remaining < 0) return;
+
+        updateCountdown(remaining);
     }, 1000);
-    
-    // Data refresh timer
+
+    // Refresh tick
     AppState.refreshTimer = setInterval(async () => {
         if (!AppState.isLoading) {
-            await loadCryptocurrencies(false); // ⬅️ don't reload charts
+            await loadCryptocurrencies(false); // prices only
         }
-        seconds = 30;
-        updateCountdown(seconds);
+
+        remaining = CONFIG.REFRESH_INTERVAL / 1000;
+        updateCountdown(remaining);
     }, CONFIG.REFRESH_INTERVAL);
-    
 }
 
 function updateCountdown(seconds) {
-    if (DOM.countdown) {
-        DOM.countdown.textContent = `${seconds}s`;
-    }
+    if (!DOM.countdown) return;
+    DOM.countdown.textContent = `${Math.max(seconds, 0)}s`;
 }
+
 
 // ============================================
 // UTILITY FUNCTIONS
