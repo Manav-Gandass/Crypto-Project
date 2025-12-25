@@ -137,36 +137,48 @@ async function handleCurrencyChange() {
 // ============================================
 // DATA LOADING
 // ============================================
-
 async function loadCryptocurrencies(includeCharts = true) {
     if (AppState.isLoading) return;
-
     AppState.isLoading = true;
 
     try {
-        showLoading();
+        if (includeCharts) {
+            showLoading();
+        }
 
         const marketData = await fetchMarketData();
+        if (!marketData || marketData.length === 0) {
+            showError('No cryptocurrency data available.');
+            return;
+        }
+
         let chartsData = {};
 
         if (includeCharts) {
-            for (const coin of marketData) {
-                try {
-                    // wait 1.5 seconds between requests (CoinGecko limit safe)
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+            // Fetch charts in parallel but safely spaced
+            const chartPromises = marketData.map((coin, index) =>
+                new Promise(resolve => {
+                    setTimeout(async () => {
+                        try {
+                            const data = await fetchChartsData(coin.id);
+                            resolve({ id: coin.id, data });
+                        } catch (err) {
+                            console.error(`Chart load failed for ${coin.id}`, err);
+                            resolve({ id: coin.id, data: [] });
+                        }
+                    }, index * 1200); // staggered to avoid rate limit
+                })
+            );
 
-                    chartsData[coin.id] = await fetchChartsData(coin.id);
-                } catch (e) {
-                    console.error(`Failed to load chart for ${coin.id}:`, e);
-                }
-            }
+            const results = await Promise.all(chartPromises);
+
+            results.forEach(result => {
+                chartsData[result.id] = result.data;
+            });
         }
 
-        if (marketData && marketData.length > 0) {
-            renderCryptoCards(marketData, chartsData, includeCharts);
-        } else {
-            showError('No cryptocurrency data available.');
-        }
+        renderCryptoCards(marketData, chartsData, includeCharts);
+
     } catch (error) {
         console.error('Error loading cryptocurrencies:', error);
         showError('Failed to load cryptocurrency data. Please try again.');
@@ -174,6 +186,7 @@ async function loadCryptocurrencies(includeCharts = true) {
         AppState.isLoading = false;
     }
 }
+
 
 
 
