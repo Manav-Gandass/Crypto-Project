@@ -137,36 +137,48 @@ async function handleCurrencyChange() {
 // ============================================
 // DATA LOADING
 // ============================================
-
 async function loadCryptocurrencies(includeCharts = true) {
     if (AppState.isLoading) return;
-
     AppState.isLoading = true;
 
     try {
-        showLoading();
+        if (includeCharts) {
+            showLoading();
+        }
 
         const marketData = await fetchMarketData();
+        if (!marketData || marketData.length === 0) {
+            showError('No cryptocurrency data available.');
+            return;
+        }
+
         let chartsData = {};
 
         if (includeCharts) {
-            for (const coin of marketData) {
-                try {
-                    // wait 1.5 seconds between requests (CoinGecko limit safe)
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+            // Fetch charts in parallel but safely spaced
+            const chartPromises = marketData.map((coin, index) =>
+                new Promise(resolve => {
+                    setTimeout(async () => {
+                        try {
+                            const data = await fetchChartsData(coin.id);
+                            resolve({ id: coin.id, data });
+                        } catch (err) {
+                            console.error(`Chart load failed for ${coin.id}`, err);
+                            resolve({ id: coin.id, data: [] });
+                        }
+                    }, index * 1200); // staggered to avoid rate limit
+                })
+            );
 
-                    chartsData[coin.id] = await fetchChartsData(coin.id);
-                } catch (e) {
-                    console.error(`Failed to load chart for ${coin.id}:`, e);
-                }
-            }
+            const results = await Promise.all(chartPromises);
+
+            results.forEach(result => {
+                chartsData[result.id] = result.data;
+            });
         }
 
-        if (marketData && marketData.length > 0) {
-            renderCryptoCards(marketData, chartsData, includeCharts);
-        } else {
-            showError('No cryptocurrency data available.');
-        }
+        renderCryptoCards(marketData, chartsData, includeCharts);
+
     } catch (error) {
         console.error('Error loading cryptocurrencies:', error);
         showError('Failed to load cryptocurrency data. Please try again.');
@@ -174,6 +186,7 @@ async function loadCryptocurrencies(includeCharts = true) {
         AppState.isLoading = false;
     }
 }
+
 
 
 
@@ -280,32 +293,50 @@ function renderCryptoCards(marketData, chartsData, includeCharts = true) {
 // ============================================
 // CHART MANAGEMENT
 // ============================================
-
 function createChart(coinId, priceData) {
     const canvas = document.getElementById(`chart-${coinId}`);
-    if (!canvas) return;
-    
-    // Destroy existing chart
-    destroyChart(coinId);
-    
+    if (!canvas || !Array.isArray(priceData) || priceData.length === 0) return;
+
     const ctx = canvas.getContext('2d');
-    
-    // Process data
-    const labels = priceData.map(point => {
-        const date = new Date(point[0]);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    
-    const prices = priceData.map(point => point[1]);
-    
+
+    // Process data in one pass
+    const labels = [];
+    const prices = [];
+
+    for (let i = 0; i < priceData.length; i++) {
+        const [timestamp, price] = priceData[i];
+        labels.push(
+            new Date(timestamp).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            })
+        );
+        prices.push(price);
+    }
+
     // Determine trend color
-    const isPositiveTrend = prices[prices.length - 1] >= prices[0];
-    const trendColor = isPositiveTrend ? '#4ade80' : '#f87171';
-    
+    const trendColor =
+        prices[prices.length - 1] >= prices[0] ? '#4ade80' : '#f87171';
+
+    // If chart already exists → update instead of destroy/recreate
+    if (AppState.charts[coinId]) {
+        const chart = AppState.charts[coinId];
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = prices;
+        chart.data.datasets[0].borderColor = trendColor;
+        chart.data.datasets[0].backgroundColor = `${trendColor}15`;
+
+        chart.options.plugins.tooltip.borderColor = trendColor;
+        chart.update('none'); // fast update, no animation
+        return;
+    }
+
+    // Create chart only once
     AppState.charts[coinId] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 data: prices,
                 borderColor: trendColor,
@@ -334,19 +365,18 @@ function createChart(coinId, priceData) {
                     cornerRadius: 8,
                     displayColors: false,
                     callbacks: {
-                        label: function(context) {
-                            return `${CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency]}${formatPrice(context.parsed.y)}`;
+                        label(context) {
+                            return (
+                                CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency] +
+                                formatPrice(context.parsed.y)
+                            );
                         }
                     }
                 }
             },
             scales: {
                 x: {
-                    display: true,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)',
-                        drawBorder: false
-                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)', drawBorder: false },
                     ticks: {
                         color: 'rgba(255, 255, 255, 0.7)',
                         maxTicksLimit: 4,
@@ -354,16 +384,15 @@ function createChart(coinId, priceData) {
                     }
                 },
                 y: {
-                    display: true,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)',
-                        drawBorder: false
-                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)', drawBorder: false },
                     ticks: {
                         color: 'rgba(255, 255, 255, 0.7)',
                         font: { size: 11 },
-                        callback: function(value) {
-                            return CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency] + formatPrice(value);
+                        callback(value) {
+                            return (
+                                CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency] +
+                                formatPrice(value)
+                            );
                         }
                     }
                 }
