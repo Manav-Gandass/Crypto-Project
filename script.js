@@ -257,7 +257,9 @@ function renderCryptoCards(marketData, chartsData, includeCharts = true) {
                         data: chartsData[coin.id].prices.map(p => p[1]),
                         borderColor: "blue",
                         fill: false,
+
                         tension: 0.2
+                        //tension inc(0.2)=> 60
                     }]
                 },
                 options: {
