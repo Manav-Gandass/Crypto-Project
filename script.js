@@ -252,24 +252,24 @@ async function fetchMarketData() {
 // RENDERING
 // ============================================
 
+
 function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
-    const container = document.getElementById('crypto-container'); // Note: changed from cryptoGrid to crypto-container to match your HTML fix
+    const container = document.getElementById('crypto-container');
     if (!container) return;
 
     container.textContent = '';
     const fragment = document.createDocumentFragment();
 
+    // --- STEP 1: Create HTML for all cards ---
     for (const coin of marketData) {
         const card = document.createElement('div');
         card.className = 'crypto-card';
 
-        // Calculate colors for the 24h change
         const change = coin.price_change_percentage_24h;
         const changeClass = change >= 0 ? 'change-positive' : 'change-negative';
         const changeSign = change >= 0 ? '+' : '';
         const symbol = CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency];
 
-        // This HTML structure now matches your CSS classes exactly
         card.innerHTML = `
             <div class="card-header">
                 <img src="${coin.image}" alt="${coin.name}" class="coin-logo">
@@ -278,7 +278,6 @@ function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
                     <span class="coin-symbol">${coin.symbol.toUpperCase()}</span>
                 </div>
             </div>
-
             <div class="price-section">
                 <div class="price-item">
                     <div class="price-label">Current Price</div>
@@ -293,25 +292,31 @@ function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
                     </div>
                 </div>
             </div>
-
             <div class="chart-container">
                 <canvas id="chart-${coin.id}"></canvas>
             </div>
         `;
 
         fragment.appendChild(card);
-
-        // Chart rendering
-        if (includeCharts && chartsData[coin.id]?.length) {
-            const normalized = chartsData[coin.id].map(p => [
-                new Date(p.time).getTime(),
-                p.value
-            ]);
-            createChart(coin.id, normalized);
-        }
     }
 
+    // --- STEP 2: Attach to the page (CRITICAL FIX) ---
+    // We must do this BEFORE trying to find the canvas elements
     container.appendChild(fragment);
+
+    // --- STEP 3: Draw the charts ---
+    if (includeCharts) {
+        for (const coin of marketData) {
+            if (chartsData[coin.id]?.length) {
+                const normalized = chartsData[coin.id].map(p => [
+                    new Date(p.time).getTime(),
+                    p.value
+                ]);
+                // Now this will work because the canvas is actually in the DOM
+                createChart(coin.id, normalized);
+            }
+        }
+    }
 }
 
 
