@@ -242,11 +242,6 @@ async function fetchMarketData() {
 // RENDERING
 // ============================================
 
-
-// ============================================
-// RENDERING
-// ============================================
-
 function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
     const container = document.getElementById('crypto-container');
     if (!container) return;
