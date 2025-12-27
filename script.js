@@ -6,7 +6,7 @@
 const CONFIG = {
     API_BASE: 'https://api.coingecko.com/api/v3',
     REFRESH_INTERVAL: 30000, // 30 seconds
-    CHART_DAYS: 7, // 7 days of price history
+    CHART_DAYS: 30, // 7 days of price history
     DEFAULT_COINS: ['bitcoin', 'ethereum', 'cardano', 'polkadot', 'chainlink', 'litecoin'],
     CURRENCY_SYMBOLS: {
         usd: '$',
