@@ -48,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeDOM() {
-    DOM.cryptoGrid = document.getElementById('cryptoGrid');
+    DOM.cryptoGrid = document.getElementById('crypto-container'); 
+    
     DOM.searchInput = document.getElementById('searchInput');
     DOM.currencySelector = document.getElementById('currencySelector');
     DOM.refreshStatus = document.getElementById('refreshStatus');
