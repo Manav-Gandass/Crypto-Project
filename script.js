@@ -213,11 +213,14 @@ async function fetchMarketData() {
 
 
   async function fetchChartsData(coinId) {
-    const PROXY = "https://cors-anywhere.herokuapp.com/";
-    const API_URL = `${CONFIG.API_BASE}/coins/${coinId}/market_chart?vs_currency=${AppState.currentCurrency}&days=${CONFIG.CHART_DAYS}&interval=daily`;
+    const API_URL =
+        `${CONFIG.API_BASE}/coins/${coinId}/market_chart` +
+        `?vs_currency=${AppState.currentCurrency}` +
+        `&days=${CONFIG.CHART_DAYS}` +
+        `&interval=daily`;
 
     try {
-        const response = await fetch(PROXY + API_URL);
+        const response = await fetch(API_URL);
         if (!response.ok) {
             console.warn(`Chart fetch failed for ${coinId}: ${response.status}`);
             return [];
@@ -226,7 +229,6 @@ async function fetchMarketData() {
         const data = await response.json();
         if (!data?.prices?.length) return [];
 
-        // Transform in one pass
         const result = new Array(data.prices.length);
         for (let i = 0; i < data.prices.length; i++) {
             const [timestamp, price] = data.prices[i];
@@ -237,7 +239,6 @@ async function fetchMarketData() {
         }
 
         return result;
-
     } catch (error) {
         console.error(`Failed to load chart for ${coinId}`, error);
         return [];
