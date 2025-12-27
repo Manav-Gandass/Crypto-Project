@@ -201,11 +201,8 @@ async function fetchMarketData() {
         `&price_change_percentage=24h`;
 
     try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
+        // CHANGED: Use fetchWithCache with a 60-second cache for prices
+        return await fetchWithCache(API_URL, 60000); 
     } catch (error) {
         console.error("Error loading cryptocurrencies:", error);
         return [];
@@ -221,13 +218,9 @@ async function fetchMarketData() {
         `&interval=daily`;
 
     try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-            console.warn(`Chart fetch failed for ${coinId}: ${response.status}`);
-            return [];
-        }
-
-        const data = await response.json();
+        // CHANGED: Use fetchWithCache with a 10-minute cache for charts
+        const data = await fetchWithCache(API_URL, 10 * 60 * 1000);
+        
         if (!data?.prices?.length) return [];
 
         const result = new Array(data.prices.length);
@@ -245,7 +238,6 @@ async function fetchMarketData() {
         return [];
     }
 }
-
   
 
 // ============================================
@@ -643,4 +635,45 @@ function cleanup() {
     });
     
     console.log('Crypto Dashboard cleaned up successfully');
+}
+
+
+// ============================================
+// CACHING HELPER (Prevents 429 Errors)
+// ============================================
+
+async function fetchWithCache(url, cacheTime = 300000) { // Default: 5 minutes cache
+    const cacheKey = `crypto_cache_${url}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+        const { timestamp, data } = JSON.parse(cached);
+        // If data is fresh (less than cacheTime old), use it
+        if (Date.now() - timestamp < cacheTime) {
+            console.log(`⚡ Using cached data for: ${url}`);
+            return data;
+        }
+    }
+
+    console.log(`🌐 Fetching fresh data: ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+        // If we get a rate limit (429), try to return old cache if it exists
+        if (response.status === 429 && cached) {
+            console.warn('Rate limit hit. Returning stale cache.');
+            return JSON.parse(cached).data;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Save to local storage
+    localStorage.setItem(cacheKey, JSON.stringify({
+        timestamp: Date.now(),
+        data: data
+    }));
+
+    return data;
 }
