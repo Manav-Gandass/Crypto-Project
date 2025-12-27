@@ -247,57 +247,45 @@ async function fetchMarketData() {
 // RENDERING
 // ============================================
 
-function renderCryptoCards(marketData, chartsData, includeCharts = true) {
-    const container = document.getElementById("crypto-container");
-    container.innerHTML = ""; // clear old cards
+function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
+    const container = document.getElementById('crypto-container');
+    if (!container) return;
 
-    marketData.forEach(coin => {
-        const card = document.createElement("div");
-        card.className = "crypto-card";
+    // Clear only once
+    container.textContent = '';
 
-        // coin details
+    const fragment = document.createDocumentFragment();
+
+    for (const coin of marketData) {
+        const card = document.createElement('div');
+        card.className = 'crypto-card';
+
         card.innerHTML = `
             <h2>${coin.name} (${coin.symbol.toUpperCase()})</h2>
-            <p>Price: $${coin.current_price.toLocaleString()}</p>
-            <p>Market Cap: $${coin.market_cap.toLocaleString()}</p>
+            <p>Price: ${CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency]}${coin.current_price.toLocaleString()}</p>
+            <p>Market Cap: ${CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency]}${coin.market_cap.toLocaleString()}</p>
             <p>24h Change: ${coin.price_change_percentage_24h.toFixed(2)}%</p>
             <canvas id="chart-${coin.id}" width="300" height="150"></canvas>
         `;
 
-        container.appendChild(card);
+        fragment.appendChild(card);
 
-        // render chart only if available
-        if (includeCharts && chartsData[coin.id]) {
-            const ctx = document.getElementById(`chart-${coin.id}`).getContext("2d");
+        // Chart rendering (only when required)
+        if (includeCharts && chartsData[coin.id]?.length) {
+            /*
+              chartsData[coin.id] is expected to be:
+              [{ time, value }]  ← from optimized fetchChartsData
+            */
+            const normalized = chartsData[coin.id].map(p => [
+                new Date(p.time).getTime(),
+                p.value
+            ]);
 
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: chartsData[coin.id].prices.map(p => {
-                        const date = new Date(p[0]);
-                        return `${date.getDate()}/${date.getMonth() + 1}`;
-                    }),
-                    datasets: [{
-                        label: `${coin.name} Price`,
-                        data: chartsData[coin.id].prices.map(p => p[1]),
-                        borderColor: "blue",
-                        fill: false,
-
-                        tension: 0.2
-                        //tension inc(0.2)=> 60
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { maxTicksLimit: 7 } },
-                        y: { beginAtZero: false }
-                    }
-                }
-            });
+            createChart(coin.id, normalized);
         }
-    });
+    }
+
+    container.appendChild(fragment);
 }
 
 
