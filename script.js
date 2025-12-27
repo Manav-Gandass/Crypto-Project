@@ -253,46 +253,66 @@ async function fetchMarketData() {
 // ============================================
 
 function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
-    const container = document.getElementById('crypto-container');
+    const container = document.getElementById('crypto-container'); // Note: changed from cryptoGrid to crypto-container to match your HTML fix
     if (!container) return;
 
-    // Clear only once
     container.textContent = '';
-
     const fragment = document.createDocumentFragment();
 
     for (const coin of marketData) {
         const card = document.createElement('div');
         card.className = 'crypto-card';
 
+        // Calculate colors for the 24h change
+        const change = coin.price_change_percentage_24h;
+        const changeClass = change >= 0 ? 'change-positive' : 'change-negative';
+        const changeSign = change >= 0 ? '+' : '';
+        const symbol = CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency];
+
+        // This HTML structure now matches your CSS classes exactly
         card.innerHTML = `
-            <h2>${coin.name} (${coin.symbol.toUpperCase()})</h2>
-            <p>Price: ${CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency]}${coin.current_price.toLocaleString()}</p>
-            <p>Market Cap: ${CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency]}${coin.market_cap.toLocaleString()}</p>
-            <p>24h Change: ${coin.price_change_percentage_24h.toFixed(2)}%</p>
-            <canvas id="chart-${coin.id}" width="300" height="150"></canvas>
+            <div class="card-header">
+                <img src="${coin.image}" alt="${coin.name}" class="coin-logo">
+                <div class="coin-info">
+                    <h3>${coin.name}</h3>
+                    <span class="coin-symbol">${coin.symbol.toUpperCase()}</span>
+                </div>
+            </div>
+
+            <div class="price-section">
+                <div class="price-item">
+                    <div class="price-label">Current Price</div>
+                    <div class="price-value current-price">
+                        ${symbol}${formatPrice(coin.current_price)}
+                    </div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">24h Change</div>
+                    <div class="price-value ${changeClass}">
+                        ${changeSign}${change.toFixed(2)}%
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="chart-${coin.id}"></canvas>
+            </div>
         `;
 
         fragment.appendChild(card);
 
-        // Chart rendering (only when required)
+        // Chart rendering
         if (includeCharts && chartsData[coin.id]?.length) {
-            /*
-              chartsData[coin.id] is expected to be:
-              [{ time, value }]  ← from optimized fetchChartsData
-            */
             const normalized = chartsData[coin.id].map(p => [
                 new Date(p.time).getTime(),
                 p.value
             ]);
-
             createChart(coin.id, normalized);
         }
     }
 
     container.appendChild(fragment);
 }
-
 
 
 // ============================================
