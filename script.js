@@ -211,24 +211,36 @@ async function fetchMarketData() {
 
   async function fetchChartsData(coinId) {
     const PROXY = "https://cors-anywhere.herokuapp.com/";
-    const API_URL = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7&interval=daily`;
-  
+    const API_URL = `${CONFIG.API_BASE}/coins/${coinId}/market_chart?vs_currency=${AppState.currentCurrency}&days=${CONFIG.CHART_DAYS}&interval=daily`;
+
     try {
-      const response = await fetch(PROXY + API_URL);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      return data.prices.map(p => ({
-        time: new Date(p[0]).toLocaleDateString(),
-        value: p[1]
-      }));
+        const response = await fetch(PROXY + API_URL);
+        if (!response.ok) {
+            console.warn(`Chart fetch failed for ${coinId}: ${response.status}`);
+            return [];
+        }
+
+        const data = await response.json();
+        if (!data?.prices?.length) return [];
+
+        // Transform in one pass
+        const result = new Array(data.prices.length);
+        for (let i = 0; i < data.prices.length; i++) {
+            const [timestamp, price] = data.prices[i];
+            result[i] = {
+                time: new Date(timestamp).toLocaleDateString(),
+                value: price
+            };
+        }
+
+        return result;
+
     } catch (error) {
-      console.error(`Failed to load chart for ${coinId}:`, error);
-      return [];
+        console.error(`Failed to load chart for ${coinId}`, error);
+        return [];
     }
-  }
+}
+
   
 
 // ============================================
