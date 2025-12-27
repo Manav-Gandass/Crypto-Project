@@ -218,24 +218,22 @@ async function fetchMarketData() {
         `&interval=daily`;
 
     try {
-        // CHANGED: Use fetchWithCache with a 10-minute cache for charts
+        // Try to get real data (cached or fresh)
         const data = await fetchWithCache(API_URL, 10 * 60 * 1000);
         
-        if (!data?.prices?.length) return [];
+        if (!data?.prices?.length) throw new Error("Empty data");
 
-        const result = new Array(data.prices.length);
-        for (let i = 0; i < data.prices.length; i++) {
-            const [timestamp, price] = data.prices[i];
-            result[i] = {
-                time: new Date(timestamp).toLocaleDateString(),
-                value: price
-            };
-        }
+        // Format real data
+        return data.prices.map(([timestamp, price]) => ({
+            time: new Date(timestamp).toLocaleDateString(),
+            value: price
+        }));
 
-        return result;
     } catch (error) {
-        console.error(`Failed to load chart for ${coinId}`, error);
-        return [];
+        console.warn(`⚠️ API Limit hit for ${coinId}. Using MOCK data.`);
+        
+        // FALLBACK: Generate fake data so the UI looks good while developing
+        return generateMockChartData(7); 
     }
 }
   
@@ -675,5 +673,25 @@ async function fetchWithCache(url, cacheTime = 300000) { // Default: 5 minutes c
         data: data
     }));
 
+    return data;
+}
+
+function generateMockChartData(days) {
+    const data = [];
+    let price = 50000; // Starting dummy price
+    const now = new Date();
+    
+    for (let i = days; i > 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        
+        // Randomly go up or down by 5%
+        price = price * (1 + (Math.random() * 0.1 - 0.05));
+        
+        data.push({
+            time: date.toLocaleDateString(),
+            value: price
+        });
+    }
     return data;
 }
