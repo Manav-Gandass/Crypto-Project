@@ -253,22 +253,57 @@ async function fetchMarketData() {
 // ============================================
 
 
+// ============================================
+// RENDERING
+// ============================================
+
 function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
     const container = document.getElementById('crypto-container');
     if (!container) return;
 
-    container.textContent = '';
+    // FIX 1: Only clear the whole grid if we are doing a full render (loading charts).
+    // If includeCharts is false, it means we are just updating prices, so we keep the DOM.
+    if (includeCharts) {
+        container.textContent = '';
+    }
+
     const fragment = document.createDocumentFragment();
 
-    // --- STEP 1: Create HTML for all cards ---
     for (const coin of marketData) {
-        const card = document.createElement('div');
-        card.className = 'crypto-card';
-
         const change = coin.price_change_percentage_24h;
         const changeClass = change >= 0 ? 'change-positive' : 'change-negative';
         const changeSign = change >= 0 ? '+' : '';
         const symbol = CONFIG.CURRENCY_SYMBOLS[AppState.currentCurrency];
+
+        // FIX 2: Check if this card already exists in the DOM
+        const existingCard = document.getElementById(`card-${coin.id}`);
+
+        // If we are doing a background refresh (includeCharts=false) and the card exists,
+        // just update the numbers and SKIP re-creating the HTML.
+        if (!includeCharts && existingCard) {
+            // Update Current Price
+            const priceEl = existingCard.querySelector('.current-price');
+            if (priceEl) {
+                priceEl.textContent = `${symbol}${formatPrice(coin.current_price)}`;
+            }
+
+            // Update Percentage Change (It's the second element with class .price-value)
+            const changeEl = existingCard.querySelectorAll('.price-value')[1];
+            if (changeEl) {
+                // Update the color (green/red) and the text
+                changeEl.className = `price-value ${changeClass}`;
+                changeEl.textContent = `${changeSign}${change.toFixed(2)}%`;
+            }
+            
+            // Skip the rest of the loop for this coin so we don't destroy the chart
+            continue; 
+        }
+
+        // --- Standard Card Creation (Runs on first load or full search) ---
+        const card = document.createElement('div');
+        card.className = 'crypto-card';
+        // FIX 3: Add an ID to the card div so we can find it later for updates
+        card.id = `card-${coin.id}`; 
 
         card.innerHTML = `
             <div class="card-header">
@@ -300,11 +335,10 @@ function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
         fragment.appendChild(card);
     }
 
-    // --- STEP 2: Attach to the page (CRITICAL FIX) ---
-    // We must do this BEFORE trying to find the canvas elements
+    // Attach any NEW cards (if any were created)
     container.appendChild(fragment);
 
-    // --- STEP 3: Draw the charts ---
+    // --- Draw the charts (Only runs on full load) ---
     if (includeCharts) {
         for (const coin of marketData) {
             if (chartsData[coin.id]?.length) {
@@ -312,7 +346,6 @@ function renderCryptoCards(marketData, chartsData = {}, includeCharts = true) {
                     new Date(p.time).getTime(),
                     p.value
                 ]);
-                // Now this will work because the canvas is actually in the DOM
                 createChart(coin.id, normalized);
             }
         }
@@ -373,7 +406,7 @@ function createChart(coinId, priceData) {
                 backgroundColor: `${trendColor}15`,
                 borderWidth: 2,
                 fill: true,
-                tension: 0.4,
+                tension: 0,
                 pointRadius: 0,
                 pointHoverRadius: 6,
                 pointHoverBackgroundColor: trendColor,
