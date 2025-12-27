@@ -189,25 +189,28 @@ async function loadCryptocurrencies(includeCharts = true) {
 
 
 
-
 async function fetchMarketData() {
-    const PROXY = "https://cors-anywhere.herokuapp.com/";
-    const API_URL =
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,cardano,polkadot,chainlink,litecoin&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h";
-  
+    const ids = AppState.currentCoins.join(',');
+    const API_URL = `${CONFIG.API_BASE}/coins/markets` +
+        `?vs_currency=${AppState.currentCurrency}` +
+        `&ids=${ids}` +
+        `&order=market_cap_desc` +
+        `&per_page=100&page=1` +
+        `&sparkline=false` +
+        `&price_change_percentage=24h`;
+
     try {
-      const response = await fetch(PROXY + API_URL);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      return data; // your loadCryptocurrencies() function will use this
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
     } catch (error) {
-      console.error("Error loading cryptocurrencies:", error);
-      return [];
+        console.error("Error loading cryptocurrencies:", error);
+        return [];
     }
-  }
-  
+}
+
 
   async function fetchChartsData(coinId) {
     const PROXY = "https://cors-anywhere.herokuapp.com/";
