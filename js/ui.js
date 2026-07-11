@@ -15,6 +15,11 @@ function renderCryptoCards(
 
     // Full render
     if (includeCharts) {
+
+        Object.keys(AppState.charts).forEach(coinId => {
+            destroyChart(coinId);
+        });
+
         container.textContent = '';
     }
 
