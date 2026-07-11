@@ -447,3 +447,20 @@ header p {
         height: 150px;
     }
 }
+.currency-selector {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 2px solid #0f9b8e;
+    border-radius: 25px;
+    padding: 12px 45px 12px 20px;
+    cursor: pointer;
+}
+
+.currency-selector option {
+    background: #1b1b1b;
+    color: white;
+}
