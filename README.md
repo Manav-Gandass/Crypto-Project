@@ -53,3 +53,6 @@ A simple cryptocurrency dashboard built using **basic HTML, CSS, and JavaScript*
 ## Preview
 
 Open `index.html` in any modern web browser to use the application.
+
+
+#Activity may be hindered due to API rate limits
