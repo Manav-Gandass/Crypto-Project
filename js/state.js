@@ -18,7 +18,9 @@ const AppState = {
     charts: {},
 
     // Prevent duplicate requests
-    isLoading: false
+    isLoading: false,
+
+    autoRefreshEnabled: true
 };
 
 // ============================================
@@ -30,7 +32,8 @@ const DOM = {
     searchInput: null,
     currencySelector: null,
     refreshStatus: null,
-    countdown: null
+    countdown: null,
+    refreshToggle: null
 };
 
 // ============================================
@@ -45,4 +48,6 @@ function initializeDOM() {
 
     DOM.refreshStatus = document.getElementById('refreshStatus');
     DOM.countdown = document.getElementById('countdown');
+
+    DOM.refreshToggle = document.getElementById("refreshToggle");
 }

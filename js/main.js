@@ -17,6 +17,11 @@ function setupEventListeners() {
         'beforeunload',
         cleanup
     );
+
+    DOM.refreshToggle.addEventListener(
+        "click",
+        toggleAutoRefresh
+    );
 }
 
 // ============================================
@@ -77,15 +82,19 @@ async function handleSearch() {
             data.coins &&
             data.coins.length > 0
         ) {
-            AppState.currentCoins =
-                data.coins
-                    .slice(
-                        0,
-                        CONFIG.MAX_SEARCH_RESULTS
-                    )
-                    .map(
-                        coin => coin.id
-                    );
+            const exactMatch = data.coins.find(
+                coin =>
+                    coin.name.toLowerCase() === query ||
+                    coin.symbol.toLowerCase() === query
+            );
+
+            if (exactMatch) {
+                AppState.currentCoins = [exactMatch.id];
+            } else {
+                AppState.currentCoins = data.coins
+                    .slice(0, CONFIG.MAX_SEARCH_RESULTS)
+                    .map(coin => coin.id);
+            }
 
             await loadCryptocurrencies();
         } else {
@@ -226,16 +235,17 @@ async function loadCryptocurrencies(includeCharts = true) {
 
 function startAutoRefresh() {
 
-    if (AppState.refreshTimer) {
-        clearInterval(AppState.refreshTimer);
+    if (!AppState.autoRefreshEnabled) {
+        return;
     }
 
-    if (AppState.countdownTimer) {
-        clearInterval(AppState.countdownTimer);
-    }
+    clearInterval(AppState.refreshTimer);
+    clearInterval(AppState.countdownTimer);
 
-    let remaining =
-        CONFIG.REFRESH_INTERVAL / 1000;
+    AppState.refreshTimer = null;
+    AppState.countdownTimer = null;
+
+    let remaining = CONFIG.REFRESH_INTERVAL / 1000;
 
     updateCountdown(remaining);
 
@@ -255,8 +265,7 @@ function startAutoRefresh() {
             await loadCryptocurrencies(false);
         }
 
-        remaining =
-            CONFIG.REFRESH_INTERVAL / 1000;
+        remaining = CONFIG.REFRESH_INTERVAL / 1000;
 
         updateCountdown(remaining);
 
@@ -293,4 +302,31 @@ function cleanup() {
     console.log(
         'Crypto Dashboard cleaned up successfully'
     );
+}
+
+function toggleAutoRefresh() {
+
+    AppState.autoRefreshEnabled =
+        !AppState.autoRefreshEnabled;
+
+    if (AppState.autoRefreshEnabled) {
+
+        DOM.refreshToggle.textContent =
+            "⏸ Pause Refresh";
+
+        startAutoRefresh();
+
+    } else {
+
+        clearInterval(AppState.refreshTimer);
+        clearInterval(AppState.countdownTimer);
+
+        AppState.refreshTimer = null;
+        AppState.countdownTimer = null;
+
+        DOM.refreshToggle.textContent =
+            "▶ Resume Refresh";
+
+        DOM.countdown.textContent = "Paused";
+    }
 }

@@ -47,8 +47,12 @@ async function fetchChartsData(coinId) {
             time: new Date(timestamp).toLocaleDateString(),
             value: price
         }));
+
     } catch (error) {
-        console.warn(`API limit hit for ${coinId}. Using mock chart data.`);
+        console.warn(
+            `API limit or fetch failed for ${coinId}. Using mock chart data.`
+        );
+
         return generateMockChartData(CONFIG.MOCK_CHART_DAYS);
     }
 }
@@ -72,26 +76,49 @@ async function fetchWithCache(url, cacheTime = 300000) {
 
     console.log(`Fetching fresh data: ${url}`);
 
-    const response = await fetch(url);
+    try {
 
-    if (!response.ok) {
-        if (response.status === 429 && cached) {
-            console.warn('Rate limit exceeded. Returning cached data.');
+        const response = await fetch(url);
+
+        if (!response.ok) {
+
+            if (response.status === 429 && cached) {
+                console.warn(
+                    'Rate limit exceeded. Returning stale cache.'
+                );
+
+                return JSON.parse(cached).data;
+            }
+
+            throw new Error(`HTTP Error ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+                timestamp: Date.now(),
+                data
+            })
+        );
+
+        return data;
+
+    } catch (error) {
+
+        console.error('Fetch failed:', error);
+
+        // If a network/CORS error occurs but we have stale cache,
+        // use it instead of failing.
+        if (cached) {
+            console.warn(
+                'Using stale cached data because the request failed.'
+            );
+
             return JSON.parse(cached).data;
         }
 
-        throw new Error(`HTTP Error ${response.status}`);
+        throw error;
     }
-
-    const data = await response.json();
-
-    localStorage.setItem(
-        cacheKey,
-        JSON.stringify({
-            timestamp: Date.now(),
-            data
-        })
-    );
-
-    return data;
 }

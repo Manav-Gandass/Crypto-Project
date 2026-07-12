@@ -464,3 +464,25 @@ header p {
     background: #1b1b1b;
     color: white;
 }
+
+.refresh-toggle {
+    padding: 12px 20px;
+    border: 2px solid #0f9b8e;
+    border-radius: 25px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.refresh-toggle:hover {
+    background: rgba(15,155,142,0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(15,155,142,0.3);
+}
+
+.refresh-toggle:active {
+    transform: scale(0.97);
+}
