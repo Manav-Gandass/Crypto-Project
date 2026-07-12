@@ -55,4 +55,4 @@ A simple cryptocurrency dashboard built using **basic HTML, CSS, and JavaScript*
 Open `index.html` in any modern web browser to use the application.
 
 
-#Activity may be hindered due to API rate limits
+#Activity limited due to API rate limits
